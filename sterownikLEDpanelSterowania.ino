@@ -21,18 +21,16 @@ ChannelDimmer Channel2(10);
 ChannelDimmer Channel3(10);
 
 unsigned long times, timenow, previous_time = 0;
-byte buttonLast = 0;   // przyciski
-byte menuLevel = 0;    // oznaczenie poziomu menu
+byte buttonLast = 0;     // przyciski
+byte menuLevel = 0;      // oznaczenie poziomu menu
 byte cursorPosition = 0; // znacznik pozycji menu
 boolean screenSaverOn = false, buttonMask = false;
 boolean znacznik = false;    // znacznik drukowania tekstu
 int screenSaverTime = 30000; // czas wygaszacza w mili
 byte button;
 byte minutesStartTime, hoursStartTime, minutesStopTime, hoursStopTime; // czas wlaczania i wylaczania led ogolny
-long wStart, wStop, bStart, bStop, rStart, rStop;                      // czasy poszczegolnych kolorow
 int yTime, xTime;
-byte wtdim = 0, btdim = 0, rtdim = 0;
-byte wdim = 0, bdim = 0, rdim = 0, gwdim = 0, gbdim = 0, grdim = 0;
+byte gwdim = 0, gbdim = 0, grdim = 0;
 byte pressPad1, pressPad2, pressPad3, pressPad4;
 byte displayColumns = 20;
 byte displayRows = 4;
@@ -43,7 +41,7 @@ void setup()
   lcd.begin(displayColumns, displayRows); // ilosc kolumn i rzedow wyswietlacza
   Wire.begin();
   rtc.begin();
-  // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   timenow = millis() + screenSaverTime; // przedział czasu do wygaszacza
   pinMode(MENU, INPUT_PULLUP);
   pinMode(UP, INPUT_PULLUP);
@@ -62,23 +60,13 @@ void setup()
   Channel2.stopTime = EEPROMReadlong(12);
   Channel3.startTime = EEPROMReadlong(16);
   Channel3.stopTime = EEPROMReadlong(20);
-
-  wStart = EEPROMReadlong(0);
-  wStop = EEPROMReadlong(4);
-  bStart = EEPROMReadlong(8);
-  bStop = EEPROMReadlong(12);
-  rStart = EEPROMReadlong(16);
-  rStop = EEPROMReadlong(20);
 }
 
 // główna pętla programu z odczytem przycisków
 void loop()
 {
-  // Serial.print(button); Serial.print(":"); Serial.println(menuLevel);
   button = 0;
   times = millis();
-  // println(time);
-
   pressPad1 = digitalRead(MENU); // przycisk MENU
   pressPad2 = digitalRead(UP);   // przycisk +
   pressPad3 = digitalRead(DOWN); // przycisk -
@@ -140,10 +128,6 @@ void loop()
     if (menuLevel == 11 || menuLevel == 12 || menuLevel == 13)
     {
       TimeSave();
-      // mainMenu(1);
-      //  delay(10);
-      //  znacznik = false;
-      // buttonMask = false;
       menuLevel = 1;
     }
     znacznik = false;
@@ -267,24 +251,22 @@ void flagaMenu(byte flag)
     byte Wdim = map(gwdim, 0, 255, 0, 100);
     byte Bdim = map(gbdim, 0, 255, 0, 100);
     byte Rdim = map(grdim, 0, 255, 0, 100);
-    centerDisplayText("Kontroler LED",0);
-    lcd.setCursor(0, 2);
-    lcd.print("C1:");
+    char *info[] = {"  Ch1:  Ch2:  Ch3:", "%", "1 Menu|2 +|3 -|4 OK"};
+    //centerDisplayText("Kontroler LED", 1);
+    lcd.setCursor(0, 1);
+    lcd.print(info[0]);
+    lcd.setCursor(2,2);
     lcd.print(Wdim);
-    lcd.print("%");
-    lcd.setCursor(7, 2);
-    lcd.print("C2:");
+    lcd.print(info[1]);
+    lcd.setCursor(8, 2);    
     lcd.print(Bdim);
-    lcd.print("%");
-    lcd.setCursor(14, 2);
-    lcd.print("C3:");
+    lcd.print(info[1]);
+    lcd.setCursor(14, 2);    
     lcd.print(Rdim);
-    lcd.print("%");
+    lcd.print(info[1]);
     lcd.setCursor(0, 3);
-    lcd.print("1 Menu|2 +|3 -|4 OK");
-    // znacznik = true;
-    //}
-    displayCurrentTime(6, 1);
+    lcd.print(info[2]);
+    displayCurrentTime(6, 0);
   }
   if (flag == 1)
   { // menu główne
@@ -315,7 +297,7 @@ void flagaMenu(byte flag)
   }
   if (flag == 10)
   { // ustawianie zegarka
-    centerDisplayText("Ustawianie czasu",0);
+    centerDisplayText("Ustawianie czasu", 0);
     displayCurrentTime(6, 2);
   }
   char *opcjeLed[] = {"Set Channel 1", "Set Channel 2", "Set Channel 3", "hh mm", "Czas", "Start:", "Stop:"};
@@ -373,7 +355,7 @@ void wygaszacz()
   {
     lcd.setBacklight(LOW);
     screenSaverOn = true;
-    lcd.noDisplay();
+    //lcd.noDisplay();
     delay(5);
   }
   if (screenSaverOn == true && button == 4)
@@ -430,7 +412,7 @@ void setZegar(byte inc)
   rtc.adjust(DateTime(0, 0, 0, h, m, 0));
 }
 
-// funkcja nastway LED
+// funkcja nastawy LED
 void SetChannelTimes(byte inc, byte poz)
 {
   odczytajCzasy();
@@ -496,46 +478,47 @@ void SetChannelTimes(byte inc, byte poz)
 // funcka zapisu czasow do poszczegolnych kolorow
 void zapiszCzasy()
 {
-  int tempStart = 0;
-  int tempStop = 0;
-  tempStart = hoursStartTime * 100 + minutesStartTime;
-  tempStop = hoursStopTime * 100 + minutesStopTime;
+  long tempStart = 0;
+  long tempStop = 0;
+  tempStart = timeConversionToSeconds(hoursStartTime, minutesStartTime);
+  tempStop = timeConversionToSeconds(hoursStopTime, minutesStopTime);
+  Serial.println(tempStop);
   if (menuLevel == 11)
   {
-    wStart = tempStart;
-    wStop = tempStop;
+    Channel1.startTime = tempStart;
+    Channel1.stopTime = tempStop;
   }
   if (menuLevel == 12)
   {
-    bStart = tempStart;
-    bStop = tempStop;
+    Channel2.startTime = tempStart;
+    Channel2.stopTime = tempStop;
   }
   if (menuLevel == 13)
   {
-    rStart = tempStart;
-    rStop = tempStop;
+    Channel3.startTime = tempStart;
+    Channel3.stopTime = tempStop;
   }
 }
 
 // funkcja odczytu czasow z poszczegolnych kolorow
 void odczytajCzasy()
 {
-  int tempStart = 0;
-  int tempStop = 0;
+  long tempStart = 0;
+  long tempStop = 0;
   if (menuLevel == 11)
   {
-    tempStart = wStart;
-    tempStop = wStop;
+    tempStart = timeConversionToHoursMinutes(Channel1.startTime);
+    tempStop = timeConversionToHoursMinutes(Channel1.stopTime);
   }
   if (menuLevel == 12)
   {
-    tempStart = bStart;
-    tempStop = bStop;
+    tempStart = timeConversionToHoursMinutes(Channel2.startTime);
+    tempStop = timeConversionToHoursMinutes(Channel2.stopTime);
   }
   if (menuLevel == 13)
   {
-    tempStart = rStart;
-    tempStop = rStop;
+    tempStart = timeConversionToHoursMinutes(Channel3.startTime);
+    tempStop = timeConversionToHoursMinutes(Channel3.stopTime);
   }
   hoursStartTime = tempStart / 100;
   minutesStartTime = tempStart - (hoursStartTime * 100);
@@ -547,121 +530,20 @@ void odczytajCzasy()
 void ledOn()
 {
   DateTime now = rtc.now();
-  long h = now.hour();
-  byte m = now.minute();
-  byte s = now.second();
-  int temporaryTimeMinutes = h * 100 + m;
-  long temporaryTimeSeconds = ((h * 3600) + (m * 60) + s);
-  if (temporaryTimeMinutes >= wStart && temporaryTimeMinutes < wStop || temporaryTimeMinutes >= bStart && temporaryTimeMinutes < bStop || temporaryTimeMinutes >= rStart && temporaryTimeMinutes < rStop)
-  {
-    dimm(temporaryTimeSeconds);
-  }
-  else
-  {
-    analogWrite(CHANNEL1_PIN, 0);
-    analogWrite(CHANNEL3_PIN, 0);
-    analogWrite(CHANNEL2_PIN, 0);
-  }
+  long hourNow = now.hour();
+  int minuteNow = now.minute();
+  dimm(timeConversionToSeconds(hourNow, minuteNow));
 }
 
 // funcja rozjasniania i zciemniania
 void dimm(long dimmingActualTime)
 {
-  if (wStop - wStart > 0 || bStop - bStart > 0 || rStop - rStart > 0)
-  {
-    // long dimmingActualTime = tptime;
-    // kontrola dim bialego
-    long wMStart = (((wStart / 100) * 60) + (wStart - (wStart / 100) * 100)) * 60; // bialy start na sekundy
-    long wMStop = (((wStop / 100) * 60) + (wStop - (wStop / 100) * 100)) * 60;     // bialy stop na sekundy
-    long deltawM = (wMStop - wMStart) * 0.1;                                       // 10% roznicy czasu na rozjasnianie i zciemnianie
-    long wdimStop = wMStart + deltawM;
-    long wdimStart = wMStop - deltawM;
-    if (dimmingActualTime >= wMStart && dimmingActualTime <= wdimStop)
-    {
-      byte wdim = map(dimmingActualTime, wMStart, wdimStop, 0, 255);
-      if (wtdim != wdim)
-      {
-        analogWrite(CHANNEL1_PIN, wdim);
-        gwdim = wdim;
-      }
-    }
-    if (dimmingActualTime >= wdimStart && dimmingActualTime <= wMStop)
-    {
-      wdim = map(dimmingActualTime, wdimStart, wMStop, 255, 0);
-      if (wtdim != wdim)
-      {
-        analogWrite(CHANNEL1_PIN, wdim);
-        gwdim = wdim;
-      }
-    }
-    if (dimmingActualTime > wdimStop && dimmingActualTime < wdimStart)
-    {
-      analogWrite(CHANNEL1_PIN, 255);
-      gwdim = 255;
-    }
-    // kontrola dim niebieskiego
-    long bMStart = (((bStart / 100) * 60) + (bStart - (bStart / 100) * 100)) * 60; // niebieski start na sekundy
-    long bMStop = (((bStop / 100) * 60) + (bStop - (bStop / 100) * 100)) * 60;     // niebieski stop na sekundy
-    long deltabM = (bMStop - bMStart) * 0.1;
-    long bdimStop = bMStart + deltabM;
-    long bdimStart = bMStop - deltabM;
-    if (dimmingActualTime >= bMStart && dimmingActualTime <= bdimStop)
-    {
-      bdim = map(dimmingActualTime, bMStart, bdimStop, 0, 255);
-      if (btdim != bdim)
-      {
-        analogWrite(CHANNEL3_PIN, bdim);
-        gbdim = bdim;
-      }
-    }
-    if (dimmingActualTime >= bdimStart && dimmingActualTime <= bMStop)
-    {
-      bdim = map(dimmingActualTime, bdimStart, bMStop, 255, 0);
-      if (btdim != bdim)
-      {
-        analogWrite(CHANNEL3_PIN, bdim);
-        gbdim = bdim;
-      }
-    }
-    if (dimmingActualTime > bdimStop && dimmingActualTime < bdimStart)
-    {
-      analogWrite(CHANNEL3_PIN, 255);
-      gbdim = 255;
-    }
-    // kontrola dim czerwonego
-    long rMStart = (((rStart / 100) * 60) + (rStart - (rStart / 100) * 100)) * 60; // czerwony start na sekundy
-    long rMStop = (((rStop / 100) * 60) + (rStop - (rStop / 100) * 100)) * 60;     // czerwony stop na sekundy
-    long deltarM = (rMStop - rMStart) * 0.1;
-    long rdimStop = rMStart + deltarM;
-    long rdimStart = rMStop - deltarM;
-    if (dimmingActualTime >= rMStart && dimmingActualTime <= rdimStop)
-    {
-      rdim = map(dimmingActualTime, rMStart, rdimStop, 0, 255);
-      if (rtdim != rdim)
-      {
-        analogWrite(CHANNEL2_PIN, rdim);
-        grdim = rdim;
-      }
-    }
-    if (dimmingActualTime >= rdimStart && dimmingActualTime <= rMStop)
-    {
-      rdim = map(dimmingActualTime, rdimStart, rMStop, 255, 0);
-      if (rtdim != rdim)
-      {
-        analogWrite(CHANNEL2_PIN, rdim);
-        grdim = rdim;
-      }
-    }
-    if (dimmingActualTime > rdimStop && dimmingActualTime < rdimStart)
-    {
-      analogWrite(CHANNEL2_PIN, 255);
-      grdim = 255;
-    }
-
-    rtdim = rdim;
-    wtdim = wdim;
-    btdim = bdim;
-  }
+  gwdim = Channel1.dimming(dimmingActualTime);
+  gbdim = Channel2.dimming(dimmingActualTime);
+  grdim = Channel3.dimming(dimmingActualTime);
+  analogWrite(CHANNEL1_PIN, gwdim);
+  analogWrite(CHANNEL2_PIN, gbdim);
+  analogWrite(CHANNEL3_PIN, grdim);
 }
 
 // zapisywanie czasów do pamięci EPROM
@@ -696,12 +578,12 @@ long EEPROMReadlong(long address)
 
 void TimeSave()
 {
-  EEPROMWritelong(0, wStart);
-  EEPROMWritelong(4, wStop);
-  EEPROMWritelong(8, bStart);
-  EEPROMWritelong(12, bStop);
-  EEPROMWritelong(16, rStart);
-  EEPROMWritelong(20, rStop);
+  EEPROMWritelong(0, Channel1.startTime);
+  EEPROMWritelong(4, Channel1.stopTime);
+  EEPROMWritelong(8, Channel2.startTime);
+  EEPROMWritelong(12, Channel2.stopTime);
+  EEPROMWritelong(16, Channel3.startTime);
+  EEPROMWritelong(20, Channel3.stopTime);
 }
 
 void displayCurrentTime(byte row, byte col)
@@ -715,11 +597,19 @@ void displayCurrentTime(byte row, byte col)
 
 void centerDisplayText(String text, byte row)
 {
-  byte startColumn = displayColumns/2-(text.length()/2);
-  lcd.setCursor(startColumn,row);
+  byte startColumn = displayColumns / 2 - (text.length() / 2);
+  lcd.setCursor(startColumn, row);
   lcd.print(text);
 }
 
-unsigned long timeConversionToSeconds(byte hours, byte minutes){
-  return hours*3600+minutes*60;
+long timeConversionToSeconds(long hours, int minutes)
+{
+  return hours * 3600 + minutes * 60;
+}
+
+long timeConversionToHoursMinutes(long timeToConvert)
+{
+  long hoursTemp = timeToConvert / 3600;
+  long minutesTemp = (timeToConvert - (hoursTemp * 3600)) / 60;
+  return (hoursTemp * 100) + minutesTemp;
 }
