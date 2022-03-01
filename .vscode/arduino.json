@@ -1,5 +1,5 @@
 {
     "board": "arduino:avr:uno",
-    "port": "COM4",
-    "sketch": "sterownikLEDpanelSterowania_v1.03.ino"
+    "port": "COM3",
+    "sketch": "sterownikLEDpanelSterowania.ino"
 }
